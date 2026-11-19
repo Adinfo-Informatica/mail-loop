@@ -1,124 +1,174 @@
-# Central de envios — versão inicial
+﻿# MailLoop
 
-Aplicação local para Node.js 24 e Windows. Não exige hospedagem em nuvem. O SMTP configurado faz a entrega: usar Locaweb significa utilizar o serviço SMTP dela, embora o programa rode na empresa.
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-24%2B-339933?logo=node.js&amp;logoColor=white" alt="Node.js 24 ou superior" />
+  <img src="https://img.shields.io/badge/Express-5-000000?logo=express&amp;logoColor=white" alt="Express 5" />
+  <img src="https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&amp;logoColor=white" alt="SQLite" />
+  <img src="https://img.shields.io/badge/JavaScript-ES_Modules-F7DF1E?logo=javascript&amp;logoColor=black" alt="JavaScript ES Modules" />
+</p>
 
-## Executar no Windows
+<p align="center">Organize seus contatos, prepare mensagens e acompanhe os envios em uma única central.</p>
 
-Abra o PowerShell nesta pasta e execute:
+<p align="center">
+  <a href="#sobre-o-projeto">Sobre</a> ·
+  <a href="#funcionalidades">Funcionalidades</a> ·
+  <a href="#como-executar">Instalação</a> ·
+  <a href="#configuracao">Configuração</a> ·
+  <a href="#estrutura">Estrutura</a>
+</p>
 
-```powershell
-npm install
-Copy-Item .env.example .env.development
-npm start
-```
+<a id="sobre-o-projeto"></a>
+## Sobre o projeto
 
-Abra http://127.0.0.1:3100. O modo inicial é SIMULAÇÃO. Cadastre uma mensagem, adicione destinatários e clique em Iniciar fila. A primeira rodada pode começar imediatamente; as seguintes respeitam o intervalo. Padrão: um destinatário a cada cinco minutos. Um lote envia mensagens individuais sequenciais. A lista não se repete automaticamente.
+O **MailLoop** é uma aplicação web para gerenciar envios de e-mail em servidor próprio. Reúne composição de mensagens, grupos de destinatários, fila persistente, controle de acesso e descadastro em um painel.
 
-Se `.env.development` já existe, pule a cópia para preservar suas configurações.
+A aplicação utiliza uma conta SMTP configurada pelo responsável pela instalação. Os registros ficam em SQLite, com bancos separados para desenvolvimento e produção.
 
-## Ambientes e configurações da empresa
+<a id="funcionalidades"></a>
+## Funcionalidades
 
-- `npm start` ou `npm run start:dev`: carrega somente `.env.development`.
-- `npm run start:prod`: carrega somente `.env.production`.
-- `npm run start:local`: carrega somente `.env`, para compatibilidade com o formato inicial.
-- Arquivo ausente gera erro; não há tentativa de usar credenciais de outro ambiente.
-- Variáveis definidas no processo têm prioridade sobre as do arquivo selecionado.
+| Recurso | O que oferece |
+| --- | --- |
+| **Central de envios** | Composição de mensagens e acompanhamento da fila e do histórico. |
+| **Grupos de destinatários** | Cadastro e edição de listas, com remoção de endereços duplicados. |
+| **Mensagens prontas** | Leitura de modelos por IMAP ou importação de arquivos `.eml`. |
+| **Ritmo configurável** | Intervalo entre rodadas e quantidade de destinatários por rodada. |
+| **Modo de simulação** | Testes da fila sem realizar envios SMTP. |
+| **Descadastro** | Link individual nas mensagens e bloqueio de novos envios ao destinatário. |
+| **Usuários e permissões** | Login, contas administrativas e contas comuns. |
+| **Hospedagem própria** | Suporte a HTTPS diretamente no Node.js. |
 
-O aplicativo reconhece `MAIL_SYSTEM_HOST`, `MAIL_SYSTEM_PORT`, `MAIL_SYSTEM_USER` e `MAIL_SYSTEM_PASSWORD`. Os equivalentes `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` e `SMTP_PASS` têm prioridade quando definidos, inclusive se estiverem vazios. Os grupos `MAIL_GMAIL_*`, `MAIL_ADINFO_*` e `MAILBOX_*` não são utilizados.
+### Perfis de acesso
 
-Se `MAIL_FROM` não estiver definido, o remetente será o usuário SMTP quando ele for um endereço de e-mail válido. Confirme a autorização dessa conta antes do envio real. Sem `SMTP_SECURE`, a porta 465 seleciona TLS direto; as demais selecionam STARTTLS obrigatório. O administrador pode definir `SMTP_SECURE=true` ou `false` explicitamente.
+| Perfil | Permissões |
+| --- | --- |
+| Usuário comum | Utilizar mensagens, grupos, fila, histórico e consulta de descadastros. |
+| Administrador | Todas as funções acima, além de cadastrar e editar contas, redefinir senhas e desativar acessos. |
 
-`DRY_RUN` ausente significa simulação. Apenas o valor exato `false` habilita envio real. `APPLICATION_TEST_MODE` não controla os envios; as demais configurações do projeto original (diretórios, porta, tokens e senhas) também não são utilizadas. Para alterar a porta do painel, use `PORT`; o padrão permanece 3100.
+A área **Usuários** fica disponível para administradores. Alterações em uma conta encerram suas sessões. Não é permitido desativar a própria conta administrativa nem retirar seu perfil de administrador.
 
-Desenvolvimento usa `data/queue-development.sqlite` e produção usa `data/queue-production.sqlite`, para não misturar testes e envios. O banco anterior `data/queue.sqlite` permanece preservado e é usado apenas por `start:local`. Pare a instância anterior antes de iniciar outra na mesma porta.
+<a id="como-executar"></a>
+## Como executar
 
-## Segurança e operação
+### Requisitos
 
-- O painel escuta apenas em 127.0.0.1. No servidor Windows, acesse por sessão local ou Área de Trabalho Remota. Não exponha na rede antes de implementar login e HTTPS.
-- Somente uma instância do processo deve usar esta pasta/banco. Não execute duas cópias contra o mesmo banco.
-- SQLite guarda mensagens e destinatários no banco do ambiente dentro de `data/`. Restrinja o acesso à pasta à conta de serviço e administradores. Faça backup com o processo parado e defina retenção conforme a política da empresa.
-- A fila sempre volta pausada após um reinício. Reiniciar não reenvia registros simulados, aceitos, cancelados ou que exigem revisão.
-- Simulados são finais: para um teste real, cadastre uma nova mensagem para uma caixa controlada pela empresa.
-- Uma falha pausa a fila e exige revisão manual; não existe repetição automática. Interrupções durante SMTP ficam com resultado incerto para evitar duplicatas. Consulte os registros do provedor antes de cadastrar novamente.
-- Pausar ou cancelar pendentes não cancela uma conexão SMTP já iniciada.
-- Mantenha `.env` e `data` fora do Git. Nunca compartilhe credenciais no chat.
+- Node.js **24 ou superior**, com npm.
+- Terminal na pasta do projeto.
+- Conta SMTP para envios reais; acesso IMAP para buscar modelos na caixa de e-mail.
 
-## SMTP real — após confirmar infraestrutura
+### Instalação local
 
-Preencha no arquivo do ambiente selecionado o host, porta, tipo de TLS, usuário, senha e remetente autorizados pelo administrador. Não adivinhe os parâmetros da Locaweb. Porta 465 normalmente usa `SMTP_SECURE=true`; STARTTLS normalmente usa 587 e `SMTP_SECURE=false`. O aplicativo exige TLS e valida certificados. A falta de senha impede iniciar em modo real, mas permite simulação.
-
-`DRY_RUN=false` habilita envio real após reiniciar. A fila continuará pausada até clicar em Iniciar fila. Teste primeiro com um endereço próprio. Não há garantia de caixa de entrada; aceitação SMTP é somente uma etapa.
-
-Confirme domínio, SPF, DKIM, DMARC, remetente autorizado e limites de volume/velocidade do plano. Com SMTP da Locaweb, a reputação e o DNS reverso do IP de entrega são responsabilidade da infraestrutura de envio dela; o IP fixo do servidor do aplicativo não substitui isso.
-
-O descadastro e o bloqueio por solicitação do destinatário estão implementados. Esta versão ainda não automatiza devoluções nem reclamações. Antes de campanhas comerciais em produção, validar a URL pública, o domínio e a origem/autorização da lista. Não usar listas compradas. Não rotacionar remetentes para contornar limites.
-
-## Descadastro
-
-Cada mensagem nova inclui um botão HTML e uma alternativa em texto com link individual. O link usa um token aleatório de 256 bits, sem expor o endereço do destinatário na URL; somente seu hash é guardado no banco. Acessar o link por GET/HEAD não altera o cadastro. Um POST confirma o descadastro. Também são aceitos os POSTs one-click do RFC 8058 em formato urlencoded ou multipart, sem login, cookies ou redirecionamento.
-
-O descadastro bloqueia todos os novos envios deste disparador para o endereço no ambiente selecionado. Mensagens ainda pendentes passam a `Descadastrado`; novas inclusões desse endereço são ignoradas e contadas no aviso do painel. Há uma nova verificação antes de cada tentativa, inclusive dentro de lotes. Uma mensagem já em transmissão pode concluir. Não existe botão de reinscrição automática.
-
-Os registros persistem no mesmo SQLite da fila. Não apague tokens nem a tabela de bloqueios ao limpar o histórico. Os links não expiram automaticamente. Faça backup do banco completo; mantenha o domínio e os links funcionando. Quem tiver o link de uma mensagem encaminhada poderá descadastrar o destinatário original. A página não mostra seu endereço.
-
-### Teste local, sem SMTP
+No PowerShell:
 
 ```powershell
-npm run preview:unsubscribe
+npm ci
+
+# Crie a configuração somente se o arquivo ainda não existir.
+if (!(Test-Path .env.development)) {
+    Copy-Item .env.example .env.development
+}
+
+npm run setup:admin -- --env=development
+npm run start:dev
 ```
 
-Abra http://127.0.0.1:3199/demo para ver uma mensagem fictícia, clicar no botão e confirmar. A demonstração usa banco em memória, não envia mensagens e não altera a lista real. Reiniciar essa demonstração restaura os dados fictícios.
+O comando de cadastro solicita usuário e senha no terminal. A senha não aparece durante a digitação e é armazenada como hash. Execute esse comando com a aplicação parada.
 
-### Configuração externa pendente
+Acesse **http://localhost:3100** e entre com a conta cadastrada. O arquivo de exemplo utiliza `DRY_RUN=true`, permitindo testar sem enviar e-mails.
 
-Como ainda não há um domínio HTTPS público definido, o envio real fica bloqueado, mesmo com `DRY_RUN=false`. O painel explica o bloqueio; é possível usar simulação. Definir a URL libera a configuração, mas não comprova que DNS, certificado e proxy estejam funcionando: valide o fluxo externamente antes de iniciar.
+### Comandos disponíveis
 
-No arquivo do ambiente escolhido:
+| Comando | Finalidade |
+| --- | --- |
+| `npm start` ou `npm run start:dev` | Iniciar usando `.env.development`. |
+| `npm run start:prod` | Iniciar usando `.env.production`. |
+| `npm run start:local` | Iniciar usando `.env`, para compatibilidade. |
+| `npm run setup:admin -- --env=development` | Cadastrar ou recuperar um administrador no ambiente indicado. |
+| `npm run preview:unsubscribe` | Abrir uma demonstração isolada do descadastro. |
+| `npm test` | Executar os testes, quando a pasta `tests/` estiver disponível. |
 
-```env
-UNSUBSCRIBE_BASE_URL=https://emails.seudominio.com.br
-UNSUBSCRIBE_PORT=3101
-```
+A demonstração de descadastro fica em **http://localhost:3199/demo**, usa dados fictícios em memória e não altera a base da aplicação.
 
-O endereço acima é ilustrativo: não o copie como endereço de produção. Use somente a origem HTTPS, sem caminho. O serviço em `127.0.0.1:3101` contém apenas as rotas `/unsubscribe/:token`. Configure um proxy reverso no servidor da empresa com certificado público válido encaminhando GET, HEAD e POST dessas rotas a essa porta. Se o proxy estiver em outro servidor, planeje a conexão entre eles; o aplicativo continua escutando apenas em loopback. Não encaminhe a porta administrativa 3100 à internet e não adicione autenticação/CAPTCHA à rota de descadastro.
+<a id="configuracao"></a>
+## Configuração
 
-Restrinja tamanho de corpo no proxy, mantenha POSTs sem redirecionamento e evite registrar tokens completos nos logs de acesso. O aplicativo limita corpos a 8 KiB. Não há instalação de DNS, certificados, proxy ou serviço Windows nesta entrega.
+Use [`.env.example`](.env.example) como referência. Cada execução lê apenas o arquivo do ambiente escolhido; variáveis definidas no processo têm prioridade sobre esse arquivo.
 
-Desenvolvimento e produção possuem bancos independentes. Antes de começar campanhas, escolha um ambiente definitivo. Ao migrar um ambiente que já fez envios reais, pare os processos e migre o banco completo (tokens e bloqueios inclusos); começar com um banco vazio perde descadastros e invalida links antigos.
+| Variável | Finalidade |
+| --- | --- |
+| `HOST` / `PORT` | Endereço de escuta e porta do painel. |
+| `ALLOWED_HOSTS` | Domínios ou IPv4 permitidos, separados por vírgula, sem protocolo ou porta. |
+| `DRY_RUN` | `true` para simulação; `false` para habilitar envios reais. |
+| `SMTP_HOST` / `SMTP_PORT` | Servidor SMTP e sua porta. |
+| `SMTP_SECURE` | `true` para TLS direto; `false` para conexão com STARTTLS. |
+| `SMTP_USER` / `SMTP_PASS` | Credenciais da conta de envio. |
+| `MAIL_FROM` | Endereço remetente autorizado. |
+| `IMAP_HOST` / `IMAP_PORT` | Servidor IMAP e porta para consultar modelos. |
+| `IMAP_USER` / `IMAP_PASS` | Credenciais IMAP, quando configuradas separadamente. |
+| `IMAP_CAMPAIGN_FOLDER` | Pasta dos modelos de mensagem; padrão: `Campanhas`. |
+| `UNSUBSCRIBE_BASE_URL` | Origem HTTPS pública do descadastro, sem caminho. |
+| `UNSUBSCRIBE_PORT` | Porta auxiliar local do serviço de descadastro. |
+| `TLS_CERT_FILE` / `TLS_KEY_FILE` | Caminhos dos arquivos PEM de certificado e chave privada. |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD_HASH` | Configuração inicial criada pelo comando de cadastro. |
 
-### Cabeçalhos e validação de entrega
+Se não forem informadas credenciais IMAP separadas, o sistema pode reutilizar as credenciais SMTP quando servidor e usuário correspondem à mesma conta. Os parâmetros de SMTP e TLS devem seguir as orientações do provedor utilizado.
 
-São enviados `List-Unsubscribe` e `List-Unsubscribe-Post: List-Unsubscribe=One-Click`. Para o provedor oferecer o botão nativo, o servidor SMTP precisa assinar esses dois cabeçalhos com DKIM. Verifique a lista `h=` da assinatura de uma mensagem real após configurar o endereço público. A presença dos cabeçalhos por si só não garante a exibição desse botão. O botão no corpo é independente.
+Depois da criação inicial, as contas são gerenciadas pelo banco de dados. Alterar os campos administrativos do `.env` não sobrescreve usuários existentes. Utilize o painel ou o comando local de recuperação com o processo parado.
 
-Referências: https://www.rfc-editor.org/rfc/rfc8058 e https://support.google.com/mail/answer/81126?hl=pt-BR . O teste fornecido para rdmakes.com.br mostrou DMARC FAIL; a causa deve ser investigada nos cabeçalhos completos e no DNS antes de ampliar os envios. Não foram alterados registros DNS.
+### Produção
 
-## Servidor Windows
+1. Crie `.env.production` a partir do exemplo, sem sobrescrever configurações existentes.
+2. Configure SMTP, domínio permitido, endereço de escuta e certificado HTTPS válido.
+3. Configure `UNSUBSCRIBE_BASE_URL`, por exemplo: `https://mail.example.com`.
+4. Cadastre o administrador com `npm run setup:admin -- --env=production`.
+5. Inicie com `npm run start:prod` e valide login e descadastro antes dos envios reais.
 
-Para um piloto supervisionado, execute `npm start` em sessão local. A instalação como serviço Windows ou tarefa na inicialização deve ser feita depois de confirmar o servidor, a conta de execução e a política operacional. Esta entrega não instala serviços nem configura DNS. Como o reinício pausa a fila, o operador precisa retomá-la; defina uma política de retomada antes de operação sem supervisão.
+O HTTPS é obrigatório em produção e para escuta fora do endereço local. Sem proxy, o servidor HTTPS principal atende tanto o painel quanto `/unsubscribe/TOKEN`; o descadastro é público e não exige login. A porta auxiliar de descadastro permanece restrita ao acesso local.
 
-## Testes
+DNS, certificado, firewall e execução como serviço devem ser configurados no servidor. A aplicação não provisiona essa infraestrutura. Mantenha `DRY_RUN=true` durante os testes iniciais; o envio real também depende da configuração da URL pública de descadastro.
 
-`npm test` testa intervalos, deduplicação, validação, pausa em falhas, concorrência e ausência de envio em simulação. Nenhum teste envia e-mail real.
+## Operação
 
+- A fila inicia pausada após cada reinício. O padrão é um destinatário a cada cinco minutos.
+- Falhas de envio exigem revisão; não há repetição automática de tentativas com resultado incerto.
+- Pausar a fila não interrompe uma conexão SMTP que já começou. Sair do painel não pausa os envios.
+- O estado **Aceito pelo SMTP** não confirma entrega na caixa de entrada.
+- O descadastro bloqueia novas inclusões e cancela envios pendentes para o endereço. Preserve seus registros e tokens ao migrar ou restaurar dados.
+- Faça backup do banco completo com a aplicação parada. Desenvolvimento e produção possuem bases independentes.
+- Modelos de e-mail têm o HTML sanitizado. Anexos e imagens incorporadas não são aceitos; imagens externas são omitidas.
+
+## Segurança e dados locais
+
+Credenciais, bancos, backups, chaves privadas e dados de destinatários devem permanecer fora do repositório. O [`.gitignore`](.gitignore) inclui regras para esses arquivos. O `.env.example` contém apenas uma estrutura de configuração, sem credenciais reais.
+
+Use contas individuais e conceda o perfil de administrador somente a quem gerencia os acessos. Não há cadastro público de usuários nem recuperação de senha por e-mail.
+
+<a id="estrutura"></a>
 ## Estrutura do projeto
 
-- `src/server.js`: inicializacao do servidor, rotas do painel e processamento da fila.
-- `src/config/`: leitura dos ambientes e caminhos absolutos do projeto.
-- `src/infrastructure/`: controle de instancia unica.
-- `src/modules/campaigns/`: modelos recebidos por IMAP ou arquivos EML.
-- `src/modules/groups/`: cadastro de grupos e destinatarios.
-- `src/modules/queue/`: persistencia e processamento dos envios.
-- `src/modules/unsubscribe/`: descadastro, bloqueios e pagina publica.
-- `public/`: paginas HTML; estilos em `css/` e scripts em `js/`.
-- `tests/`: testes automatizados, executados com `npm test`.
-- `scripts/`: ferramentas auxiliares, como a previa local de descadastro.
-- `docs/`: guias do projeto.
-- `data/`: bancos e trava de execucao (dados locais, fora do Git).
+```text
+public/                 # Páginas da aplicação
+  css/                  # Estilos
+  js/                   # Scripts da interface
+src/
+  config/               # Configuração e caminhos
+  infrastructure/       # Controle de instância
+  modules/
+    auth/               # Login, sessões e usuários
+    campaigns/          # Modelos de mensagem
+    groups/             # Grupos de destinatários
+    queue/              # Fila e persistência dos envios
+    unsubscribe/        # Descadastro e bloqueios
+  server.js             # Inicialização e rotas
+scripts/                # Cadastro administrativo e demonstração
+docs/                   # Documentação complementar, quando disponível
+tests/                  # Testes locais
+data/                   # Dados locais; fora do Git
+.env.example            # Modelo de configuração
+```
 
-Os arquivos `.env.development`, `.env.production` e `.env.example` ficam na raiz.
-Os comandos continuam sendo `npm run start:dev`, `npm run start:prod` e
-`npm run preview:unsubscribe`. Para executar diretamente, use
-`node src/server.js --env=development`.
-Os caminhos de configuracao, banco e interface sao resolvidos pela localizacao do
-projeto, sem depender da pasta atual do terminal. Os bancos existentes nao precisam
-ser movidos ou recriados.
+## Testes e limitações
+
+Os testes locais cobrem fila, configuração, descadastro, autenticação e permissões, sem enviar e-mails reais. A pasta `tests/` está atualmente ignorada pelo Git e não acompanha um clone do repositório; `npm test` exige que ela esteja disponível.
+
+A aplicação ainda não automatiza o tratamento de devoluções e reclamações. A entrega depende também da autenticação do domínio, da reputação do remetente e das regras do provedor. Não há garantia de entrega fora da pasta de spam.
