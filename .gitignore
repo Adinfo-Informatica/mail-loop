@@ -1,0 +1,70 @@
+﻿# Dependencias instaladas
+node_modules/
+
+# Configuracoes locais e segredos (manter apenas o modelo sem credenciais)
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Dados da aplicacao: destinatarios, filas, historico e descadastros
+/data/
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+
+# Mensagens e arquivos locais de importacao/exportacao
+*.eml
+*.msg
+*.pst
+*.ost
+/imports/
+/exports/
+/backups/
+*.bak
+
+# Logs, processos e arquivos temporarios
+*.log
+logs/
+*.pid
+*.pid.lock
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+tmp/
+temp/
+.cache/
+
+# Saidas geradas e cobertura de testes
+coverage/
+.nyc_output/
+dist/
+build/
+*.tsbuildinfo
+
+# Preferencias locais de editores e sistema operacional
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Pacotes compactados para compartilhamento
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+
+#Outros
+tests/
