@@ -65,6 +65,7 @@ app.post('/api/groups',(req,res)=>res.status(201).json(groups.save(req.body)));
 app.put('/api/groups/:id',(req,res)=>res.json(groups.save(req.body,Number(req.params.id))));
 app.get('/api/state', (req,res) => res.json({...queue.snapshot(), token:req.auth.token, sender:from, environment:config.environment,
   unsubscribeReady:config.unsubscribe.ready,sendBlocked:!dryRun && !config.unsubscribe.ready}));
+app.get('/api/jobs/:id/error',(req,res)=>{const log=queue.errorLog(Number(req.params.id));if(!log)return res.status(404).json({error:'Registro de erro não encontrado.'});res.json(log);});
 app.post('/api/settings', (req,res) => { queue.settings(req.body.interval,req.body.batch); res.json({ok:true}); });
 const previews = new Map();
 function rememberPreview(model) {

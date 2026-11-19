@@ -1,3 +1,4 @@
+import { sendDiagnostic } from './send-diagnostic.js';
 import { DatabaseSync } from 'node:sqlite';
 import { UnsubscribeStore } from '../unsubscribe/unsubscribe.js';
 export const emailOK = value => typeof value === 'string' && /^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/.test(value) && value.length < 255;
@@ -12,10 +13,22 @@ export class Queue {
     if (!this.db.prepare('PRAGMA table_info(jobs)').all().some(column => column.name === 'html')) {
       this.db.exec('ALTER TABLE jobs ADD COLUMN html TEXT');
     }
+    this.db.exec('CREATE TABLE IF NOT EXISTS send_errors (job_id INTEGER PRIMARY KEY, created TEXT NOT NULL, diagnostic TEXT NOT NULL)');
+    for(const job of this.db.prepare("SELECT id FROM jobs WHERE status='sending'").all())this.recordError(job.id,{},true);
     this.optOut = new UnsubscribeStore(this.db);
     // An SMTP interruption can have an ambiguous result. Never retry it automatically.
     this.db.prepare("UPDATE jobs SET status='uncertain', detail='Processo interrompido durante tentativa; confira no SMTP antes de reenviar.' WHERE status='sending'").run();
     this.db.prepare('UPDATE config SET paused=1 WHERE id=1').run();
+  }
+  recordError(id,error,interrupted=false) {
+    this.db.prepare('INSERT OR REPLACE INTO send_errors VALUES(?,?,?)').run(id,new Date().toISOString(),JSON.stringify(sendDiagnostic(error,interrupted)));
+  }
+  errorLog(id) {
+    if(!Number.isSafeInteger(id)||id<1)throw Error('Registro inválido.');
+    const job=this.db.prepare('SELECT status,updated FROM jobs WHERE id=?').get(id);
+    if(!job || !['review','uncertain'].includes(job.status))return null;
+    const log=this.db.prepare('SELECT * FROM send_errors WHERE job_id=?').get(id);
+    return {jobId:id,created:log?.created || job.updated,...(log?JSON.parse(log.diagnostic):sendDiagnostic({},job.status==='uncertain')),legacy:!log};
   }
   config() { return this.db.prepare('SELECT * FROM config WHERE id=1').get(); }
   settings(interval, batch) {
@@ -62,11 +75,12 @@ export class Queue {
         try {
           if (!this.dryRun) {
             const info = await this.send(job);
-            if (!info.accepted?.length) throw Error('Destinatário não aceito');
+            if (!info.accepted?.length) throw Object.assign(Error('Destinatario nao aceito'),{code:'SMTP_NOT_ACCEPTED'});
             status = 'accepted'; detail = 'Aceito pelo SMTP; não confirma entrega na caixa de entrada.';
           }
         } catch (error) {
-          status = 'review'; detail = `Tentativa requer revisão (${String(error.code || 'SMTP_ERROR').replace(/[^A-Z0-9_]/g,'').slice(0,40)}). Sem repetição automática.`;
+          this.recordError(job.id,error);
+          status = 'review'; detail = 'Erro ao enviar. Consulte o registro de erro. Sem repetição automática.';
           this.pause(true);
         }
         this.db.prepare('UPDATE jobs SET status=?, detail=?, updated=? WHERE id=?').run(status,detail,new Date().toISOString(),job.id);

@@ -1,10 +1,14 @@
+import { presentQueue } from './queue-view.js';
 const $ = selector => document.querySelector(selector);
-const names = {pending:'Pendente',sending:'Em tentativa',simulated:'Simulado',accepted:'Aceito pelo SMTP',review:'Revisar',uncertain:'Resultado incerto',cancelled:'Cancelado',suppressed:'Descadastrado'};
+const names = {pending:'Pendente',sending:'Em tentativa',simulated:'Simulado',accepted:'Aceito pelo SMTP',review:'Erro ao enviar',uncertain:'Erro ao enviar',error:'Erro ao enviar',cancelled:'Cancelado',suppressed:'Descadastrado'};
 let token, initialized = false, real = false;
 function notice(message,error=false){ $('#notice').textContent=message; $('#notice').className=error?'error':''; }
 async function api(path,body){const response=await fetch('/api/'+path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','x-app-token':token},body:JSON.stringify(body)}); if(!response.ok){let data;try{data=await response.json();}catch{} throw Error(data?.error || 'Não foi possível concluir. Atualize o painel.');} return response.json();}
 async function refresh(){
   const state=await api('state');token=state.token;real=!state.dryRun;
+  const view=presentQueue(state);
+  $('#mode').hidden=view.production && real && !state.sendBlocked;
+  $('#stats').classList.toggle('production',view.production);
   $('#mode').textContent=state.sendBlocked?'Envio bloqueado':real?'Envio real':'Simulação';
   $('#sender').textContent=state.sender || 'Não informado';
   $('#queueStatus').textContent=state.config.paused?'Fila pausada':'Fila em execução';
@@ -17,19 +21,23 @@ async function refresh(){
   if(!state.suppressions?.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=2;cell.textContent='Nenhum descadastro registrado neste ambiente.';row.append(cell);$('#suppressions').append(row);}
   if(!initialized){$('#settings').elements.minutes.value=state.config.interval/60;$('#settings').elements.batch.value=state.config.batch;initialized=true;}
   $('#stats').replaceChildren();
-  for(const key of ['pending','simulated','accepted','review','uncertain']){const card=document.createElement('div');card.className='stat';const value=document.createElement('strong');value.textContent=state.counts.find(x=>x.status===key)?.total || 0;const label=document.createElement('span');label.textContent=names[key];card.append(value,label);$('#stats').append(card);}
+  for(const {key,total} of view.cards){const card=document.createElement('div');card.className='stat';const value=document.createElement('strong');value.textContent=total;const label=document.createElement('span');label.textContent=names[key];card.append(value,label);$('#stats').append(card);}
   $('#history').replaceChildren();
-  for(const job of state.jobs){
+  for(const job of view.jobs){
     const row=document.createElement('tr');
     const recipient=row.insertCell(); recipient.textContent=job.recipient;
     const subject=document.createElement('small'); subject.textContent=job.subject; recipient.append(subject);
     const status=document.createElement('span'); status.className='status '+job.status; status.textContent=names[job.status] || job.status;
     row.insertCell().append(status);
     row.insertCell().textContent=new Date(job.updated).toLocaleString('pt-BR');
-    row.insertCell().textContent=job.detail;
+    const detail=row.insertCell();
+    if(['review','uncertain'].includes(job.status)){
+      const button=document.createElement('button');button.type='button';button.textContent='Ver erro';button.setAttribute('aria-label','Ver erro do envio '+job.id);
+      button.addEventListener('click',()=>showError(job.id));detail.append(button);
+    }else{detail.textContent=job.detail;}
     $('#history').append(row);
   }
-  if(!state.jobs.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=4;cell.textContent='Nenhuma mensagem na fila. Prepare sua primeira simulação.';row.append(cell);$('#history').append(row);}
+  if(!view.jobs.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=4;cell.textContent='Nenhuma mensagem para exibir.';row.append(cell);$('#history').append(row);}
 }
 async function action(task){try{await task();await refresh();}catch(error){notice(error.message,true);}}
 $('#compose').onsubmit=event=>{event.preventDefault();const form=event.target;const button=form.querySelector('.primary');button.disabled=true;action(async()=>{const result=await api('jobs',{groupId:Number($('#sendGroup').value),groupRevision:Number($('#sendGroup').selectedOptions[0]?.dataset.revision),recipients:form.elements.recipients.value.split(/[\n,;]+/).map(x=>x.trim()).filter(Boolean),subject:form.elements.subject.value,body:form.elements.body.value,previewId:activePreview});if(result.added){clearPreview();form.reset();}notice(`${result.added} mensagem(ns) adicionada(s). ${result.skipped || 0} destinatário(s) ignorado(s) por descadastro.`);}).finally(()=>button.disabled=false);};
@@ -119,3 +127,19 @@ async function refreshGroups() {
 }
 refreshGroups().catch(error=>notice(error.message,true));
 window.addEventListener('focus',()=>refreshGroups().catch(error=>notice(error.message,true)));
+
+let errorRequest=0;
+async function showError(id){
+ const request=++errorRequest,dialog=$('#errorDialog'),content=$('#errorContent');
+ content.textContent='Carregando registro…';if(!dialog.open)dialog.showModal();
+ try{
+  const log=await api('jobs/'+id+'/error');if(request!==errorRequest)return;content.replaceChildren();
+  const list=document.createElement('dl');
+  for(const [name,value] of [['Envio',log.jobId],['Data',new Date(log.created).toLocaleString('pt-BR')],['Categoria',log.category],['Código',log.code],['Etapa SMTP',log.phase],['Código SMTP',log.smtpCode || 'Não informado']]){
+    const label=document.createElement('dt'),detail=document.createElement('dd');label.textContent=name;detail.textContent=value;list.append(label,detail);
+  }
+  const guidance=document.createElement('p');guidance.textContent=log.guidance;content.append(list,guidance);
+  if(log.legacy){const note=document.createElement('p');note.textContent='Registro anterior à criação do log. Detalhes técnicos não estão disponíveis.';content.append(note);}
+ }catch(error){if(request===errorRequest)content.textContent=error.message;}
+}
+$('#closeError').addEventListener('click',()=>$('#errorDialog').close());
