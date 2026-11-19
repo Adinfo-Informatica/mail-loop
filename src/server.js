@@ -1,3 +1,9 @@
+import { Users } from './modules/auth/users.js';
+import { readFileSync } from 'node:fs';
+import { createServer as createHTTPServer } from 'node:http';
+import { createServer as createHTTPSServer } from 'node:https';
+import { resolve } from 'node:path';
+import { accessConfig, installAuth, requireAdmin } from './modules/auth/auth.js';
 import express from 'express';
 import nodemailer from 'nodemailer';
 import { mkdirSync } from 'node:fs';
@@ -12,6 +18,8 @@ import { createUnsubscribeApp } from './modules/unsubscribe/unsubscribe-app.js';
 import { readCampaigns, parseCampaign, maxCampaignBytes } from './modules/campaigns/campaigns.js';
 const config = loadConfig();
 const {port, dryRun, smtp, from} = config;
+const access = accessConfig(config.env,config.environment);
+const tls = access.secure ? {cert:readFileSync(resolve(root,access.cert)),key:readFileSync(resolve(root,access.key))} : null;
 mkdirSync(new URL('data/', projectURL), {recursive:true});
 const releaseLock = acquireLock(new URL('data/app.lock', projectURL));
 process.on('exit', releaseLock);
@@ -29,21 +37,33 @@ const queue = new Queue(root + 'data/' + database, job => {
   return transport.sendMail({...buildMessage(job,from,config.unsubscribe.baseURL,queue.optOut),
     messageId:`<queue-${job.id}-${randomBytes(12).toString('hex')}@${from.split('@')[1]}>`});
 }, dryRun);
-const app = express(); const token = randomBytes(32).toString('hex');
+const app = express();
 app.disable('x-powered-by');
 app.use((req,res,next) => {
-  if (!['127.0.0.1','localhost'].includes(req.hostname)) return res.sendStatus(403);
+  if (!access.hosts.includes(req.hostname.toLowerCase())) return res.sendStatus(403);
   res.set({'Content-Security-Policy':"default-src 'self'; style-src 'self'; script-src 'self'; frame-ancestors 'none'", 'X-Content-Type-Options':'nosniff', 'Cache-Control':'no-store'});
-  if (req.method !== 'GET' && req.get('x-app-token') !== token) return res.sendStatus(403);
+  res.set('Referrer-Policy','no-referrer');
   next();
 });
+// Public opt-out is deliberately mounted before login and CSRF checks.
+const publicUnsubscribe = createUnsubscribeApp(queue.optOut);
+app.use((req,res,next)=>req.path.startsWith('/unsubscribe/') ? publicUnsubscribe(req,res,next) : next());
+app.use('/api/auth/login',express.json({limit:'4kb'}));
 app.use(express.json({limit:'1mb'}));
+const users = new Users(queue.db);
+users.bootstrap(access.user,access.hash);
+installAuth(app,access,root+'public',{users});
+app.get('/usuarios.html',requireAdmin,(req,res)=>res.sendFile('usuarios.html',{root:root+'public'}));
+app.use('/api/users',requireAdmin);
+app.get('/api/users',(req,res)=>res.json(users.list()));
+app.post('/api/users',async(req,res)=>res.status(201).json(await users.save(req.body,undefined,req.auth.user.id)));
+app.put('/api/users/:id',async(req,res)=>res.json(await users.save(req.body,Number(req.params.id),req.auth.user.id)));
 const groups = new Groups(queue.db);
 app.get('/api/groups',(req,res)=>res.json(groups.list()));
 app.get('/api/groups/:id',(req,res)=>res.json(groups.get(req.params.id)));
 app.post('/api/groups',(req,res)=>res.status(201).json(groups.save(req.body)));
 app.put('/api/groups/:id',(req,res)=>res.json(groups.save(req.body,Number(req.params.id))));
-app.get('/api/state', (req,res) => res.json({...queue.snapshot(), token, sender:from, environment:config.environment,
+app.get('/api/state', (req,res) => res.json({...queue.snapshot(), token:req.auth.token, sender:from, environment:config.environment,
   unsubscribeReady:config.unsubscribe.ready,sendBlocked:!dryRun && !config.unsubscribe.ready}));
 app.post('/api/settings', (req,res) => { queue.settings(req.body.interval,req.body.batch); res.json({ok:true}); });
 const previews = new Map();
@@ -80,14 +100,15 @@ app.post('/api/cancel', (req,res) => res.json({cancelled:queue.cancel()}));
 app.use(express.static(root + 'public'));
 app.use((error,req,res,next) => res.status(400).json({error:error.type === 'entity.too.large' ? 'Conteúdo muito grande.' : error.message}));
 let timer, server, unsubscribeServer;
-const listen = (application, listenPort) => new Promise((resolve,reject) => {
-  const listener = application.listen(listenPort,'127.0.0.1',()=>resolve(listener));
+const listen = (application, listenPort, host='127.0.0.1', tlsOptions=null) => new Promise((resolve,reject) => {
+  const listener = tlsOptions ? createHTTPSServer(tlsOptions,application) : createHTTPServer(application);
+  listener.listen(listenPort,host,()=>resolve(listener));
   listener.once('error',reject);
 });
 try {
   unsubscribeServer = await listen(createUnsubscribeApp(queue.optOut),config.unsubscribe.port);
-  server = await listen(app,port);
-  console.log(`Painel: http://127.0.0.1:${port} | ${config.environment} | ${dryRun ? 'SIMULAÇÃO' : 'ENVIO REAL'} | fila pausada`);
+  server = await listen(app,port,access.host,tls);
+  console.log(`Painel: ${access.secure?'https':'http'}://${access.hosts[0]}:${port} | ${config.environment} | ${dryRun ? 'SIMULAÇÃO' : 'ENVIO REAL'} | fila pausada`);
   console.log(`Descadastro local: ${config.unsubscribe.localURL} | ${config.unsubscribe.ready?'URL pública configurada; valide o acesso externo':'SEM URL PÚBLICA: envio real bloqueado'}`);
   timer = setInterval(() => {
     if (!dryRun && !config.unsubscribe.ready) return;

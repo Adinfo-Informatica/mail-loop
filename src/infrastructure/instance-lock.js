@@ -19,7 +19,7 @@ export function acquireLock(path) {
     return () => {
       if (released) return;
       released = true;
-      try { if (readFileSync(path,'utf8').trim() === String(process.pid)) unlinkSync(path); }
+      try { if (readFileSync(path, 'utf8').trim() === String(process.pid)) unlinkSync(path); }
       catch (error) { if (error.code !== 'ENOENT') throw error; }
     };
   }

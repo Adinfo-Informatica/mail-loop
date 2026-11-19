@@ -1,14 +1,49 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Grupos de e-mail · RD Makes</title><link rel="stylesheet" href="/css/style.css"><script type="module" defer src="/js/groups.js"></script></head>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Grupos de e-mail · RD Makes</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script type="module" defer src="/js/groups.js"></script>
+    <script src="/js/session.js"></script>
+</head>
+
 <body>
-<header class="mast"><div class="mast-inner"><a href="/" class="brand"><i class="brand-icon" aria-hidden="true"></i>RD Makes</a><nav aria-label="Navegação principal"><a href="/">Compor</a><a href="/grupos.html" aria-current="page">Grupos</a></nav></div></header>
-<main><div class="title"><h1>Grupos de e-mail</h1></div>
-<div id="notice" role="status" aria-live="polite"></div>
-<div class="workspace"><section class="card">
-<h2 id="editorTitle">Novo grupo</h2>
-<form id="editor"><label>Nome do grupo<input name="groupName" maxlength="100" placeholder="Ex.: Clientes com TOTVS e SOC" required></label>
-<label>E-mails do grupo<textarea name="members" rows="9" placeholder="contato@empresa.com.br" required></textarea></label>
-<small>Cole os endereços separados por linha, vírgula ou ponto e vírgula. Duplicados contam uma vez.</small>
-<div class="actions"><button class="primary" id="save" disabled>Salvar grupo</button><button type="button" id="new">Limpar e criar outro</button></div></form></section>
-<aside><section class="card"><h2>Grupos cadastrados</h2><div id="list" class="group-list"></div></section></aside></div></main></body></html>
+    <header class="mast">
+        <div class="mast-inner"><a href="/" class="brand"><i class="brand-icon" aria-hidden="true"></i>RD Makes</a>
+            <nav aria-label="Navegação principal"><a href="/">Compor</a><a href="/grupos.html"
+                    aria-current="page">Grupos</a><a href="/usuarios.html" data-admin-only hidden>Usu?rios</a><button
+                    type="button" id="logout">Sair</button></nav>
+        </div>
+    </header>
+    <main>
+        <div class="title">
+            <h1>Grupos de e-mail</h1>
+        </div>
+        <div id="notice" role="status" aria-live="polite"></div>
+        <div class="workspace">
+            <section class="card">
+                <h2 id="editorTitle">Novo grupo</h2>
+                <form id="editor"><label>Nome do grupo<input name="groupName" maxlength="100"
+                            placeholder="Ex.: Clientes com TOTVS e SOC" required></label>
+                    <label>E-mails do grupo<textarea name="members" rows="9" placeholder="contato@empresa.com.br"
+                            required></textarea></label>
+                    <small>Cole os endereços separados por linha, vírgula ou ponto e vírgula. Duplicados contam uma
+                        vez.</small>
+                    <div class="actions"><button class="primary" id="save" disabled>Salvar grupo</button><button
+                            type="button" id="new">Limpar e criar outro</button></div>
+                </form>
+            </section>
+            <aside>
+                <section class="card">
+                    <h2>Grupos cadastrados</h2>
+                    <div id="list" class="group-list"></div>
+                </section>
+            </aside>
+        </div>
+    </main>
+</body>
+
+</html>

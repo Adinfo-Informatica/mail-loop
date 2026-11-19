@@ -1,0 +1,77 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Usuários · MailLoop</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/users.css">
+    <script src="/js/session.js"></script>
+    <script type="module" src="/js/users.js"></script>
+</head>
+<body>
+    <header class="mast">
+        <div class="mast-inner"><a class="brand" href="/">MailLoop</a>
+            <nav aria-label="Navegação principal"><a href="/">Compor</a><a href="/grupos.html">Grupos</a><a
+                    href="/usuarios.html" aria-current="page">Usuários</a><button type="button"
+                    id="logout">Sair</button></nav>
+        </div>
+    </header>
+    <main>
+        <div class="title">
+            <div>
+                <h1>Usuários</h1>
+                <p>Controle quem pode acessar o MailLoop.</p>
+            </div><button type="button" id="newUser">Novo usuário</button>
+        </div>
+        <div id="notice" role="status" aria-live="polite"></div>
+        <div class="users-layout">
+            <section class="card">
+                <h2 id="formTitle">Cadastrar usuário</h2>
+                <form id="userForm">
+                    <fieldset id="userFields" disabled>
+                        <label>Nome<input name="name" maxlength="100" required autocomplete="name"></label>
+                        <label>Usuário de acesso<input name="username" maxlength="100" pattern="[a-zA-Z0-9@._\-]+"
+                                required autocomplete="off" spellcheck="false"></label><small>Sem espaços. Pode ser um
+                            nome ou e-mail.</small>
+                        <label>Perfil<select name="role">
+                                <option value="user">Usuário comum</option>
+                                <option value="admin">Administrador</option>
+                            </select></label>
+                        <p class="role-help">Usuário comum: envios e grupos. Administrador: também gerencia as contas de
+                            acesso.</p>
+                        <label id="passwordLabel">Senha inicial<input name="password" type="password" minlength="12"
+                                maxlength="256" autocomplete="new-password" required></label><small
+                            id="passwordHelp">Use de 12 a 256 caracteres.</small>
+                        <label class="check user-active"><input name="active" type="checkbox" checked>Conta
+                            ativa</label>
+                        <p id="editHelp" hidden>Salvar alterações encerra as sessões dessa conta. Desativar impede novos
+                            acessos.</p>
+                        <div class="actions"><button class="primary" type="submit">Salvar usuário</button><button
+                                type="button" id="cancelEdit">Limpar</button></div>
+                    </fieldset>
+                </form>
+            </section>
+            <section class="card users-list">
+                <div class="section-head">
+                    <h2>Contas cadastradas</h2><button id="reloadUsers" type="button">Atualizar</button>
+                </div>
+                <p id="userCount">Carregando…</p>
+                <div class="tablewrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome / usuário</th>
+                                <th>Perfil</th>
+                                <th>Status</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

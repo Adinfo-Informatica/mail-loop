@@ -1,40 +1,119 @@
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Central de envios · RD Makes</title>
-  <link rel="stylesheet" href="/css/style.css"><script src="/js/app.js" defer></script>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/app.js" defer></script>
+  <script src="/js/session.js"></script>
 </head>
+
 <body>
-<header class="mast"><div class="mast-inner">
-  <a class="brand" href="#mensagem"><i class="brand-icon" aria-hidden="true"></i>RD Makes</a>
-  <nav aria-label="Navegação principal"><a href="#mensagem">Compor</a><a href="/grupos.html">Grupos</a><a href="#historico">Histórico</a><a href="#descadastros">Descadastros</a></nav>
-  <strong id="mode">Carregando…</strong>
-</div></header>
-<main>
-  <div class="title"><h1>Central de envios</h1><div class="sender"><span>Remetente</span><strong id="sender">Carregando…</strong></div></div>
-  <div id="stats" class="stats" aria-label="Resumo de mensagens"></div>
-  <div id="notice" role="status" aria-live="polite"></div>
-  <div class="workspace">
-    <section id="mensagem" class="card composer">
-      <div class="section-head"><i class="compose-icon" aria-hidden="true">✎</i><h2>Nova mensagem</h2></div>
-      <div class="model-picker"><h3>Usar mensagem pronta</h3><p>Salve a mensagem na pasta Campanhas da conta de e-mail ou importe um arquivo .eml.</p><div class="actions"><button id="listModels" type="button">Buscar na caixa de e-mail</button><label class="file-label">Importar .eml<input id="modelFile" type="file" accept=".eml,message/rfc822"></label></div><label id="modelChoice" hidden>Mensagem da pasta Campanhas<select id="modelSelect"></select></label><p id="modelInfo" role="status"></p></div><form id="compose">
-        <label>Grupo de destinatários<select id="sendGroup"><option value="">Escolha um grupo ou informe e-mails abaixo</option></select></label><small><a href="/grupos.html" target="_blank" rel="noopener">Cadastrar ou editar grupos</a></small><label>E-mails avulsos<textarea name="recipients" rows="2" aria-describedby="dest-help" placeholder="nome@empresa.com.br"></textarea></label>
-        <small id="dest-help">Separe os endereços por linha, vírgula ou ponto e vírgula.</small>
-        <label>Assunto<input name="subject" maxlength="200" required placeholder="Assunto do e-mail"></label>
-        <div id="richPreview" hidden><h3>Prévia da mensagem</h3><div id="modelContent"></div><small>O rodapé de descadastro será acrescentado ao envio.</small><br><button id="clearModel" type="button">Voltar à composição manual</button></div><label id="manualBody">Mensagem<textarea name="body" rows="6" maxlength="100000" required placeholder="Escreva sua mensagem…"></textarea></label>
-        <div class="compose-foot"><label class="check"><input type="checkbox" required>Revisei a mensagem e confirmo que os destinatários estão autorizados a recebê-la.</label><button class="primary">Adicionar à fila <span aria-hidden="true">→</span></button></div>
-      </form>
-    </section>
-    <aside>
-      <section class="card queue"><div class="section-head"><h2>Fila de envio</h2><strong id="queueStatus">Carregando…</strong></div>
-        <p id="next"></p>
-        <div class="actions"><button id="resume" class="primary" disabled>Iniciar fila</button><button id="pause" disabled>Pausar</button><button id="cancel" class="danger">Cancelar pendentes</button></div>
-        <div class="alert"><strong>Descadastro</strong><p id="unsubscribeStatus">Carregando configuração…</p></div>
+  <header class="mast">
+    <div class="mast-inner">
+      <a class="brand" href="#mensagem"><i class="brand-icon" aria-hidden="true"></i>RD Makes</a>
+      <nav aria-label="Navegação principal"><a href="#mensagem">Compor</a><a href="/grupos.html">Grupos</a><a
+          href="#historico">Histórico</a><a href="#descadastros">Descadastros</a><a href="/usuarios.html"
+          data-admin-only hidden>Usuários</a><button type="button" id="logout">Sair</button></nav>
+      <strong id="mode">Carregando…</strong>
+    </div>
+  </header>
+  <main>
+    <div class="title">
+      <h1>Central de envios</h1>
+      <div class="sender"><span>Remetente</span><strong id="sender">Carregando…</strong></div>
+    </div>
+    <div id="stats" class="stats" aria-label="Resumo de mensagens"></div>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <div class="workspace">
+      <section id="mensagem" class="card composer">
+        <div class="section-head"><i class="compose-icon" aria-hidden="true">✎</i>
+          <h2>Nova mensagem</h2>
+        </div>
+        <div class="model-picker">
+          <h3>Usar mensagem pronta</h3>
+          <p>Salve a mensagem na pasta Campanhas da conta de e-mail ou importe um arquivo .eml.</p>
+          <div class="actions"><button id="listModels" type="button">Buscar na caixa de e-mail</button><label
+              class="file-label">Importar .eml<input id="modelFile" type="file" accept=".eml,message/rfc822"></label>
+          </div><label id="modelChoice" hidden>Mensagem da pasta Campanhas<select id="modelSelect"></select></label>
+          <p id="modelInfo" role="status"></p>
+        </div>
+        <form id="compose">
+          <label>Grupo de destinatários<select id="sendGroup">
+              <option value="">Escolha um grupo ou informe e-mails abaixo</option>
+            </select></label><small><a href="/grupos.html" target="_blank" rel="noopener">Cadastrar ou editar
+              grupos</a></small><label>E-mails avulsos<textarea name="recipients" rows="2" aria-describedby="dest-help"
+              placeholder="nome@empresa.com.br"></textarea></label>
+          <small id="dest-help">Separe os endereços por linha, vírgula ou ponto e vírgula.</small>
+          <label>Assunto<input name="subject" maxlength="200" required placeholder="Assunto do e-mail"></label>
+          <div id="richPreview" hidden>
+            <h3>Prévia da mensagem</h3>
+            <div id="modelContent"></div><small>O rodapé de descadastro será acrescentado ao envio.</small><br><button
+              id="clearModel" type="button">Voltar à composição manual</button>
+          </div><label id="manualBody">Mensagem<textarea name="body" rows="6" maxlength="100000" required
+              placeholder="Escreva sua mensagem…"></textarea></label>
+          <div class="compose-foot"><label class="check"><input type="checkbox" required>Revisei a mensagem e confirmo
+              que os destinatários estão autorizados a recebê-la.</label><button class="primary">Adicionar à fila <span
+                aria-hidden="true">→</span></button></div>
+        </form>
       </section>
-      <section class="card"><h2>Ritmo de envio</h2><form id="settings"><div class="fields"><label>Intervalo (min)<input name="minutes" type="number" min="1" max="1440" value="5" required></label><label>Por rodada<input aria-label="Destinatários por rodada" name="batch" type="number" min="1" max="100" value="1" required></label></div><button>Salvar configuração</button></form></section>
-    </aside>
-  </div>
-  <section id="historico" class="card records"><h2>Histórico recente</h2><p>Últimos 100 registros. A aceitação pelo SMTP confirma que o servidor recebeu a mensagem.</p><div class="tablewrap"><table><thead><tr><th>Destinatário / assunto</th><th>Estado</th><th>Atualização</th><th>Detalhe</th></tr></thead><tbody id="history"></tbody></table></div></section>
-  <section id="descadastros" class="card records"><h2>Destinatários descadastrados</h2><p id="suppressionCount"></p><div class="tablewrap"><table><thead><tr><th>E-mail</th><th>Data do descadastro</th></tr></thead><tbody id="suppressions"></tbody></table></div></section>
-</main></body></html>
+      <aside>
+        <section class="card queue">
+          <div class="section-head">
+            <h2>Fila de envio</h2><strong id="queueStatus">Carregando…</strong>
+          </div>
+          <p id="next"></p>
+          <div class="actions"><button id="resume" class="primary" disabled>Iniciar fila</button><button id="pause"
+              disabled>Pausar</button><button id="cancel" class="danger">Cancelar pendentes</button></div>
+          <div class="alert"><strong>Descadastro</strong>
+            <p id="unsubscribeStatus">Carregando configuração…</p>
+          </div>
+        </section>
+        <section class="card">
+          <h2>Ritmo de envio</h2>
+          <form id="settings">
+            <div class="fields"><label>Intervalo (min)<input name="minutes" type="number" min="1" max="1440" value="5"
+                  required></label><label>Por rodada<input aria-label="Destinatários por rodada" name="batch"
+                  type="number" min="1" max="100" value="1" required></label></div><button>Salvar configuração</button>
+          </form>
+        </section>
+      </aside>
+    </div>
+    <section id="historico" class="card records">
+      <h2>Histórico recente</h2>
+      <p>Últimos 100 registros. A aceitação pelo SMTP confirma que o servidor recebeu a mensagem.</p>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Destinatário / assunto</th>
+              <th>Estado</th>
+              <th>Atualização</th>
+              <th>Detalhe</th>
+            </tr>
+          </thead>
+          <tbody id="history"></tbody>
+        </table>
+      </div>
+    </section>
+    <section id="descadastros" class="card records">
+      <h2>Destinatários descadastrados</h2>
+      <p id="suppressionCount"></p>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr>
+              <th>E-mail</th>
+              <th>Data do descadastro</th>
+            </tr>
+          </thead>
+          <tbody id="suppressions"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+
+</html>

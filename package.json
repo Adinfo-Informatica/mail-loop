@@ -12,7 +12,8 @@
     "start:prod": "node src/server.js --env=production",
     "start:local": "node src/server.js --env=local",
     "preview:unsubscribe": "node scripts/preview-unsubscribe.js",
-    "test": "node --test \"tests/*.test.js\""
+    "test": "node --test \"tests/*.test.js\"",
+    "setup:admin": "node scripts/setup-admin.js"
   },
   "dependencies": {
     "express": "^5.1.0",
