@@ -169,6 +169,8 @@ data/                   # Dados locais; fora do Git
 
 ## Testes e limitações
 
+Administradores podem usar **Limpar histórico** na página principal. Após confirmação, a ação exclui o histórico de envios finalizados e seus detalhes de erro para todos os usuários do ambiente, inclusive registros além dos 100 exibidos. Mensagens pendentes ou em envio, usuários, grupos, configurações e descadastros (incluindo os links já enviados) são preservados. A limpeza não pode ser desfeita pelo painel.
+
 Os testes locais cobrem fila, configuração, descadastro, autenticação e permissões, sem enviar e-mails reais. A pasta `tests/` está atualmente ignorada pelo Git e não acompanha um clone do repositório; `npm test` exige que ela esteja disponível.
 
 A aplicação ainda não automatiza o tratamento de devoluções e reclamações. A entrega depende também da autenticação do domínio, da reputação do remetente e das regras do provedor. Não há garantia de entrega fora da pasta de spam.
