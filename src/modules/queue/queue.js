@@ -55,6 +55,16 @@ export class Queue {
       counts:this.db.prepare('SELECT status, COUNT(*) AS total FROM jobs GROUP BY status').all(),
       jobs:this.db.prepare('SELECT id,recipient,subject,status,updated,detail FROM jobs ORDER BY id DESC LIMIT 100').all()};
   }
+  clearHistory() {
+    const completed = "status IN ('accepted','simulated','review','uncertain','cancelled','suppressed')";
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.db.prepare(`DELETE FROM send_errors WHERE job_id IN (SELECT id FROM jobs WHERE ${completed})`).run();
+      const deleted = this.db.prepare(`DELETE FROM jobs WHERE ${completed}`).run().changes;
+      this.db.exec('COMMIT');
+      return deleted;
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
   async tick(now = Date.now()) {
     if (this.busy) return;
     const cfg = this.config(); if (cfg.paused || now < cfg.next) return;
